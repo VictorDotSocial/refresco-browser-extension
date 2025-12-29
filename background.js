@@ -1,73 +1,128 @@
 'use strict';
 
-// Objeto para almacenar los intervalos de refresco por pestaña
-const refreshTabs = {};
+// Key prefix para almacenamiento en chrome.storage.local
+const STORAGE_PREFIX = 'refresh_';
 
-// Función para iniciar el refresco de una pestaña
-function startTabRefresh(tabId, interval) {
-  // Detener cualquier refresco existente para esta pestaña
-  if (refreshTabs[tabId]) {
-    clearInterval(refreshTabs[tabId].timerId);
-    delete refreshTabs[tabId];
-  }
-
-  // Crear un nuevo intervalo de refresco
-  refreshTabs[tabId] = {
-    interval: interval,
-    startTime: Date.now(),
-    timerId: setInterval(() => {
-      // Recargar la pestaña
-      chrome.tabs.reload(tabId);
-      // Actualizar el tiempo de inicio para el próximo ciclo
-      refreshTabs[tabId].startTime = Date.now();
-    }, interval * 1000)
-  };
+function alarmNameForTab(tabId) {
+  return `refresh-${tabId}`;
 }
 
-// Función para detener el refresco de una pestaña
-function stopTabRefresh(tabId) {
-  if (refreshTabs[tabId]) {
-    clearInterval(refreshTabs[tabId].timerId);
-    delete refreshTabs[tabId];
-  }
+// Iniciar refresco: crear/actualizar alarma y persistir datos
+function startTabRefresh(tabId, interval, callback) {
+  const endTime = Date.now() + interval * 1000;
+  const name = alarmNameForTab(tabId);
+
+  // Guardar metadata en storage para recuperar estado si el service worker se reinicia
+  const data = {};
+  const key = STORAGE_PREFIX + tabId;
+  data[key] = { interval, endTime };
+  chrome.storage.local.set(data, () => {
+    if (chrome.runtime.lastError) {
+      console.error('storage.set failed in startTabRefresh:', chrome.runtime.lastError);
+      if (typeof callback === 'function') callback(false);
+      return;
+    }
+
+    // Limpiar alarma previa y crear una nueva cuando corresponda
+    chrome.alarms.clear(name, () => {
+      chrome.alarms.create(name, { when: endTime });
+      if (typeof callback === 'function') callback(true);
+    });
+  });
 }
 
-// Escuchar mensajes del popup
+// Detener refresco: borrar alarma y eliminar metadata
+function stopTabRefresh(tabId, callback) {
+  const name = alarmNameForTab(tabId);
+  const key = STORAGE_PREFIX + tabId;
+  chrome.alarms.clear(name, () => {
+    chrome.storage.local.remove(key, () => {
+      if (chrome.runtime.lastError) {
+        console.error('storage.remove failed in stopTabRefresh:', chrome.runtime.lastError);
+        if (typeof callback === 'function') callback(false);
+        return;
+      }
+      if (typeof callback === 'function') callback(true);
+    });
+  });
+}
+
+// Responder al popup sobre el estado actual
+function handleCheckRefreshStatus(tabId, sendResponse) {
+  chrome.storage.local.get(STORAGE_PREFIX + tabId, (items) => {
+    const key = STORAGE_PREFIX + tabId;
+    const entry = items[key];
+    if (entry) {
+      let remainingTime = (entry.endTime - Date.now()) / 1000;
+      if (remainingTime <= 0.1) {
+        remainingTime = entry.interval;
+      }
+      sendResponse({ isRefreshing: true, interval: entry.interval, remainingTime });
+    } else {
+      sendResponse({ isRefreshing: false });
+    }
+  });
+}
+
+// Manejar mensajes desde popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  switch(message.action) {
+  switch (message.action) {
     case 'startRefresh':
-      // Solo iniciar si no hay un refresco activo
-      if (!refreshTabs[message.tabId]) {
-        startTabRefresh(message.tabId, message.interval);
-      }
-      break;
-    
+      // Esperar a que se persista antes de confirmar al popup
+      startTabRefresh(message.tabId, message.interval, (ok) => {
+        sendResponse({ success: !!ok });
+      });
+      return true; // respuesta asíncrona
     case 'stopRefresh':
-      stopTabRefresh(message.tabId);
-      break;
-    
+      stopTabRefresh(message.tabId, (ok) => {
+        sendResponse({ success: !!ok });
+      });
+      return true; // respuesta asíncrona
     case 'checkRefreshStatus':
-      // Responder con el estado actual del refresco para esta pestaña
-      const tabStatus = refreshTabs[message.tabId];
-      if (tabStatus) {
-        let remainingTime = (tabStatus.startTime + (tabStatus.interval * 1000) - Date.now()) / 1000;
-        // Si el tiempo restante es muy pequeño o negativo, mostrar el intervalo completo
-        if (remainingTime <= 0.1) {
-          remainingTime = tabStatus.interval;
-        }
-        sendResponse({
-          isRefreshing: true,
-          interval: tabStatus.interval,
-          remainingTime: remainingTime
-        });
-      } else {
-        sendResponse({ isRefreshing: false });
-      }
-      return true; // Indica que la respuesta será asíncrona
+      // Indicamos que la respuesta será asíncrona devolviendo true
+      handleCheckRefreshStatus(message.tabId, sendResponse);
+      return true;
   }
 });
 
-// Limpiar intervalos cuando se cierra una pestaña
+// Cuando se dispara la alarma: recargar la pestaña y programar la próxima ejecución
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (!alarm || !alarm.name) return;
+
+  const match = alarm.name.match(/^refresh-(\d+)$/);
+  if (!match) return;
+
+  const tabId = parseInt(match[1], 10);
+  if (isNaN(tabId)) return;
+
+  // Recuperar metadata (interval) para programar el siguiente alarm
+  chrome.storage.local.get(STORAGE_PREFIX + tabId, (items) => {
+    const key = STORAGE_PREFIX + tabId;
+    const entry = items[key];
+    if (!entry) return;
+
+    // Recargar la pestaña si aún existe
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError || !tab) {
+        // Pestaña no existe, limpiar
+        stopTabRefresh(tabId);
+        return;
+      }
+
+      chrome.tabs.reload(tabId);
+
+      // Programar siguiente ejecución
+      const nextEndTime = Date.now() + entry.interval * 1000;
+      const newData = {};
+      newData[key] = { interval: entry.interval, endTime: nextEndTime };
+      chrome.storage.local.set(newData, () => {
+        chrome.alarms.create(alarm.name, { when: nextEndTime });
+      });
+    });
+  });
+});
+
+// Limpiar cuando se cierra una pestaña
 chrome.tabs.onRemoved.addListener((tabId) => {
   stopTabRefresh(tabId);
 });

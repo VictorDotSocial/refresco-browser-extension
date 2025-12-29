@@ -12,7 +12,9 @@
   },
   "permissions": [
     "tabs",
-    "activeTab"
+    "activeTab",
+    "alarms",
+    "storage"
   ],
   "action": {
     "default_popup": "popup.html",

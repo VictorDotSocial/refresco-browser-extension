@@ -17,10 +17,15 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.runtime.sendMessage(
       { action: 'checkRefreshStatus', tabId: currentTabId },
       (response) => {
-        if (response.isRefreshing) {
+        if (response && response.isRefreshing) {
           // Restaurar estado de refresco
           secondsInput.value = response.interval;
           updateInterfaceForRefresh(response.interval, response.remainingTime);
+        } else {
+          // Asegurar interfaz en estado inicial
+          startBtn.style.display = 'block';
+          stopBtn.style.display = 'none';
+          countdownDisplay.textContent = '';
         }
       }
     );
@@ -59,32 +64,51 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    // Iniciar refresco
-    updateInterfaceForRefresh(seconds, seconds);
+    if (!currentTabId) {
+      alert('No se pudo detectar la pestaña actual. Vuelve a intentar.');
+      return;
+    }
 
-    // Enviar mensaje al background script
-    chrome.runtime.sendMessage({
-      action: 'startRefresh',
-      tabId: currentTabId,
-      interval: seconds
+    // Pedir al background que inicie y esperar confirmación antes de mostrar UI
+    chrome.runtime.sendMessage({ action: 'startRefresh', tabId: currentTabId, interval: seconds }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('startRefresh error:', chrome.runtime.lastError);
+        alert('Error al comunicarse con el background. Reintenta.');
+        return;
+      }
+      if (response && response.success) {
+        updateInterfaceForRefresh(seconds, seconds);
+      } else {
+        alert('No se pudo iniciar el refresco. Intenta de nuevo.');
+      }
     });
   });
 
   stopBtn.addEventListener('click', function() {
-    // Detener intervalos
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
+    if (!currentTabId) {
+      // Restaurar UI localmente
+      if (countdownInterval) clearInterval(countdownInterval);
+      startBtn.style.display = 'block';
+      stopBtn.style.display = 'none';
+      countdownDisplay.textContent = '';
+      return;
     }
 
-    // Restaurar interfaz
-    startBtn.style.display = 'block';
-    stopBtn.style.display = 'none';
-    countdownDisplay.textContent = '';
+    // Pedir al background que detenga y actualizar la UI tras confirmación
+    chrome.runtime.sendMessage({ action: 'stopRefresh', tabId: currentTabId }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('stopRefresh error:', chrome.runtime.lastError);
+      }
 
-    // Enviar mensaje al background script
-    chrome.runtime.sendMessage({
-      action: 'stopRefresh',
-      tabId: currentTabId
+      // Detener intervalos
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+
+      // Restaurar interfaz
+      startBtn.style.display = 'block';
+      stopBtn.style.display = 'none';
+      countdownDisplay.textContent = '';
     });
   });
 });
