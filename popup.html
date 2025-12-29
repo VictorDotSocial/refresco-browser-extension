@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Refresco</title>
+  <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <img src="./icon.svg" width="200px" height="auto"><h2>Refresco</h2>
+    <div class="input-group">
+      <input type="number" id="seconds" placeholder="Segundos" min="1">
+      <button id="startBtn" class="btn-green">Iniciar</button>
+      <button id="stopBtn" class="btn-red" style="display: none;">Detener</button>
+    </div>
+    <div id="countdown" class="countdown"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
