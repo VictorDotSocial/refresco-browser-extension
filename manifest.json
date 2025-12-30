@@ -3,6 +3,7 @@
   "name": "Refresco",
   "version": "1.0",
   "description": "Recarga páginas web en intervalos personalizados",
+  "default_locale": "es",
   "author": "VictorDotSocial",
   "homepage_url": "https://github.com/VictorDotSocial/refresco-browser-extension",
   "icons": {
