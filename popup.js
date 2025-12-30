@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ocultar botón de inicio y mostrar botón de detener
     startBtn.style.display = 'none';
     stopBtn.style.display = 'block';
+    // Deshabilitar el campo de entrada
+    secondsInput.disabled = true;
 
     // Limpiar cualquier intervalo existente
     if (countdownInterval) {
@@ -109,6 +111,8 @@ document.addEventListener('DOMContentLoaded', function() {
       startBtn.style.display = 'block';
       stopBtn.style.display = 'none';
       countdownDisplay.textContent = '';
+      // Habilitar el campo de entrada
+      secondsInput.disabled = false;
     });
   });
 });

@@ -81,3 +81,9 @@ h2 {
   background-color: rgba(33, 150, 243, 0.1);
   border-radius: 8px;
 }
+
+.footer-text {
+  margin-top: 15px;
+  font-size: 12px;
+  color: #666;
+}
