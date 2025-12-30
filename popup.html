@@ -2,19 +2,19 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Refresco</title>
+  <title></title>
   <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
   <div class="container">
-    <img src="./icon.png" width="200px" height="auto"><h2>Refresco</h2>
+    <img src="./icon.png" width="200px" height="auto"><h2 id="extName"></h2>
     <div class="input-group">
-      <input type="number" id="seconds" placeholder="Segundos" min="1">
-      <button id="startBtn" class="btn-green">Iniciar</button>
-      <button id="stopBtn" class="btn-red" style="display: none;">Detener</button>
+      <input type="number" id="seconds" placeholder="" min="1">
+      <button id="startBtn" class="btn-green"></button>
+      <button id="stopBtn" class="btn-red" style="display: none;"></button>
     </div>
     <div id="countdown" class="countdown"></div>
-    <div class="footer-text"><p>Developed by: <a href="https://github.com/VictorDotSocial" alt="Link to the author's GitHub profile" target="_blank">VictorDotSocial</a></p></div>
+    <div class="footer-text"><p><span id="developedBy"></span> <a href="https://github.com/VictorDotSocial" alt="Link to the author's GitHub profile" target="_blank">VictorDotSocial</a></p></div>
   </div>
   <script src="popup.js"></script>
 </body>

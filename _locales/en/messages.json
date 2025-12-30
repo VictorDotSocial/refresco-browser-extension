@@ -1,0 +1,35 @@
+{
+  "extName": {
+    "message": "Refresco"
+  },
+  "extDescription": {
+    "message": "Reload webpages at custom intervals"
+  },
+  "seconds": {
+    "message": "Enter time in seconds"
+  },
+  "start": {
+    "message": "Start"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "developed_by": {
+    "message": "Developed by:"
+  },
+  "invalid_seconds": {
+    "message": "Please enter a valid number of seconds"
+  },
+  "no_tab_detected": {
+    "message": "Could not detect the current tab. Try again."
+  },
+  "comm_error": {
+    "message": "Error communicating with the background. Try again."
+  },
+  "start_failed": {
+    "message": "Could not start refresh. Try again."
+  },
+  "next_refresh": {
+    "message": "Next refresh in: $1 seconds"
+  }
+}

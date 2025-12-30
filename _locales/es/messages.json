@@ -1,0 +1,35 @@
+{
+  "extName": {
+    "message": "Refresco"
+  },
+  "extDescription": {
+    "message": "Recarga páginas web en intervalos personalizados"
+  },
+  "seconds": {
+    "message": "Indica el tiempo en segundos"
+  },
+  "start": {
+    "message": "Iniciar"
+  },
+  "stop": {
+    "message": "Detener"
+  },
+  "developed_by": {
+    "message": "Desarrollado por:"
+  },
+  "invalid_seconds": {
+    "message": "Por favor, introduce un número válido de segundos"
+  },
+  "no_tab_detected": {
+    "message": "No se pudo detectar la pestaña actual. Vuelve a intentar."
+  },
+  "comm_error": {
+    "message": "Error al comunicarse con el background. Reintenta."
+  },
+  "start_failed": {
+    "message": "No se pudo iniciar el refresco. Intenta de nuevo."
+  },
+  "next_refresh": {
+    "message": "Próximo refresco en: $1 segundos"
+  }
+}

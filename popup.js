@@ -4,25 +4,41 @@ let currentTabId = null;
 let countdownInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+  const i18n = chrome.i18n.getMessage;
   const startBtn = document.getElementById('startBtn');
   const stopBtn = document.getElementById('stopBtn');
   const secondsInput = document.getElementById('seconds');
   const countdownDisplay = document.getElementById('countdown');
+  const extNameEl = document.getElementById('extName');
+  const developedByEl = document.getElementById('developedBy');
 
-  // Obtener la pestaña actual
+  // Set static localized UI strings
+  try {
+    const name = i18n('extName') || '';
+    document.title = name;
+    if (extNameEl) extNameEl.textContent = name;
+    if (secondsInput) secondsInput.placeholder = i18n('seconds');
+    if (startBtn) startBtn.textContent = i18n('start');
+    if (stopBtn) stopBtn.textContent = i18n('stop');
+    if (developedByEl) developedByEl.textContent = i18n('developed_by');
+  } catch (e) {
+    console.warn('i18n substitution failed', e);
+  }
+
+  // Get the current active tab
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     currentTabId = tabs[0].id;
 
-    // Verificar el estado de refresco actual
+    // Verify if the tab is already set to refresh
     chrome.runtime.sendMessage(
       { action: 'checkRefreshStatus', tabId: currentTabId },
       (response) => {
         if (response && response.isRefreshing) {
-          // Restaurar estado de refresco
+          // Restore the interface
           secondsInput.value = response.interval;
           updateInterfaceForRefresh(response.interval, response.remainingTime);
         } else {
-          // Asegurar interfaz en estado inicial
+          // Ensure interface is in initial state
           startBtn.style.display = 'block';
           stopBtn.style.display = 'none';
           countdownDisplay.textContent = '';
@@ -32,21 +48,16 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   function updateInterfaceForRefresh(seconds, remainingTime) {
-    // Ocultar botón de inicio y mostrar botón de detener
     startBtn.style.display = 'none';
     stopBtn.style.display = 'block';
-    // Deshabilitar el campo de entrada
     secondsInput.disabled = true;
 
-    // Limpiar cualquier intervalo existente
     if (countdownInterval) {
       clearInterval(countdownInterval);
     }
 
-    // Mostrar el tiempo restante inicial inmediatamente
-    countdownDisplay.textContent = `Próximo refresco en: ${Math.ceil(remainingTime)} segundos`;
+    countdownDisplay.textContent = i18n('next_refresh', Math.ceil(remainingTime).toString());
 
-    // Iniciar contador de cuenta regresiva
     countdownInterval = setInterval(() => {
       remainingTime--;
 
@@ -54,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
         remainingTime = seconds;
       }
 
-      countdownDisplay.textContent = `Próximo refresco en: ${Math.ceil(remainingTime)} segundos`;
+      countdownDisplay.textContent = i18n('next_refresh', Math.ceil(remainingTime).toString());
     }, 1000);
   }
 
@@ -62,33 +73,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const seconds = parseInt(secondsInput.value);
     
     if (isNaN(seconds) || seconds <= 0) {
-      alert('Por favor, introduce un número válido de segundos');
+      alert(i18n('invalid_seconds'));
       return;
     }
 
     if (!currentTabId) {
-      alert('No se pudo detectar la pestaña actual. Vuelve a intentar.');
+      alert(i18n('no_tab_detected'));
       return;
     }
 
-    // Pedir al background que inicie y esperar confirmación antes de mostrar UI
     chrome.runtime.sendMessage({ action: 'startRefresh', tabId: currentTabId, interval: seconds }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('startRefresh error:', chrome.runtime.lastError);
-        alert('Error al comunicarse con el background. Reintenta.');
+        alert(i18n('comm_error'));
         return;
       }
       if (response && response.success) {
         updateInterfaceForRefresh(seconds, seconds);
       } else {
-        alert('No se pudo iniciar el refresco. Intenta de nuevo.');
+        alert(i18n('start_failed'));
       }
     });
   });
 
   stopBtn.addEventListener('click', function() {
     if (!currentTabId) {
-      // Restaurar UI localmente
       if (countdownInterval) clearInterval(countdownInterval);
       startBtn.style.display = 'block';
       stopBtn.style.display = 'none';
@@ -96,22 +105,18 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    // Pedir al background que detenga y actualizar la UI tras confirmación
     chrome.runtime.sendMessage({ action: 'stopRefresh', tabId: currentTabId }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('stopRefresh error:', chrome.runtime.lastError);
       }
 
-      // Detener intervalos
       if (countdownInterval) {
         clearInterval(countdownInterval);
       }
 
-      // Restaurar interfaz
       startBtn.style.display = 'block';
       stopBtn.style.display = 'none';
       countdownDisplay.textContent = '';
-      // Habilitar el campo de entrada
       secondsInput.disabled = false;
     });
   });

@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Refresco",
+  "name": "__MSG_extName__",
   "version": "1.0",
-  "description": "Recarga páginas web en intervalos personalizados",
-  "default_locale": "es",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "author": "VictorDotSocial",
   "homepage_url": "https://github.com/VictorDotSocial/refresco-browser-extension",
   "icons": {
